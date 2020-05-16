@@ -36,6 +36,8 @@ public class LibrarySimulation implements Library {
                 newBook.setShelfName(lastShelf.getName());
                 lastShelf.addBook(newBook);
             }
+            // restore order in shelves after book is added
+            library.put(genre, sortShelfs(library.get(genre)));
         } 
         // no shelfs exisit for genre
         else {
@@ -45,13 +47,29 @@ public class LibrarySimulation implements Library {
     }
 
     // restore order in shelves after book is added
-    private void sortShelfs(ArrayList<Shelf> shelfs){
-        ArrayList<Book> allBooks;
-        ArrayList<Book> shelfBooks;
+    private ArrayList<Shelf> sortShelfs(ArrayList<Shelf> shelfs){
+        ArrayList<Shelf> newShelfs = new ArrayList<Shelf>();
+        TreeSet<Book> allBooks = new TreeSet<Book>(new Shelf.BookSortingComparator());
+        Iterator<Book> shelfBooks;
         for (int i = 0; i < shelfs.size(); i++){
-            shelfBooks = shelfs.get(i).getBooks();
+            shelfBooks = shelfs.get(i).getBooks().iterator();
+            while (shelfBooks.hasNext()){
+                allBooks.add(shelfBooks.next());
+            }
         }
-        sortBooks(allBooks); 
+        Iterator<Book> alliter = allBooks.iterator();
+        for (int i = 0; i < shelfs.size(); i++){
+            Shelf newShelf = new Shelf(maxShelfSize, shelfs.get(i).getGenre(), i + 1);
+            newShelfs.add(newShelf);
+            int k = 0;
+            while(alliter.hasNext() && k < maxShelfSize){
+                Book book = alliter.next();
+                book.setShelfName(shelfs.get(i).getGenre() + " - " + Integer.toString(i + 1));
+                newShelfs.get(i).addBook(book); 
+                k++;
+            }
+        }
+        return newShelfs;
     }
 
     // create a new shelf, add book and add shelf to library
@@ -96,125 +114,139 @@ public class LibrarySimulation implements Library {
         // iterate over library hashmap until finding shelfName
         Iterator<String> iter = library.keySet().iterator();
         Shelf shelf = null;
-        ArrayList<Book> books;
+        Iterator<Book> books;
         while (iter.hasNext()){
             String genre = iter.next();
             ArrayList<Shelf> shelfs = library.get(genre);
             for (int i = 0; i < shelfs.size(); i++){
-                if (shelfs.get(i).getName() == shelfName)
+                if (shelfs.get(i).getName().equals(shelfName))
                     shelf = shelfs.get(i);
             }
         }
         // iterate over books in shelf and get all isbns
         if (shelf != null){
-            books = shelf.getBooks();
-            for (int i = 0; i < books.size(); i++){
-                isbns.add(books.get(i).getIsbn());
+            books = shelf.getBooks().iterator();
+            while(books.hasNext()){
+                isbns.add(books.next().getIsbn());
             }
+        }
+        return isbns;
+    }
+    
+    public List<Long> getISBNs(TreeSet<Book> books){
+        Iterator<Book> iter = books.iterator();
+        List<Long> isbns = new ArrayList<Long>();
+        while (iter.hasNext()){
+            isbns.add(iter.next().getIsbn());
         }
         return isbns;
     }
 
     public List<Long> getISBNsForGenre(String genre, int limit) {
         int cnt = 0;
-        ArrayList<Long> isbns = new ArrayList<Long>();
         ArrayList<Shelf> genreShelfs = library.get(genre);
         Iterator<Shelf> iter = genreShelfs.iterator();
-        ArrayList<Book> books;
+        Iterator<Book> books;
+        TreeSet<Book> returnBooks = new TreeSet<Book>(new Shelf.BookSortingComparator());
         while (iter.hasNext() && cnt < limit){
-            books = iter.next().getBooks();
-            for (int i = 0; i < books.size() && cnt < limit; i++, cnt++){
-                isbns.add(books.get(i).getIsbn());
+            books = iter.next().getBooks().iterator();
+            while(books.hasNext() && cnt < limit){
+                returnBooks.add(books.next());
+                cnt++;
             }
         }
-        return isbns;
+        return getISBNs(returnBooks);
     }
 
     public List<Long> getISBNsForAuthor(String author, int limit) {
         int cnt = 0;
-        ArrayList<Long> isbns = new ArrayList<Long>();
         // iterate over entire library hashmap
         Iterator<String> iter = library.keySet().iterator();
-        ArrayList<Book> books;
+        Iterator<Book> books;
         Shelf shelf;
+        TreeSet<Book> returnBooks = new TreeSet<Book>(new Shelf.BookSortingComparator());
         while (iter.hasNext() && cnt < limit){
             ArrayList<Shelf> shelfs = library.get(iter.next());
             for (int i = 0; i < shelfs.size() && cnt < limit; i++){
-                books = shelfs.get(i).getBooks();
-                for (int j = 0; j < books.size() && cnt < limit; j++){
-                    if (books.get(j).getAuthor().equals(author)){
-                        isbns.add(books.get(j).getIsbn());
+                books = shelfs.get(i).getBooks().iterator();
+                while (books.hasNext() && cnt < limit){
+                    Book book = books.next();
+                    if (book.getAuthor().equals(author)){
+                        returnBooks.add(book);
                         cnt++;
                     }
                 }
             }
         }
-        return isbns;
+        return getISBNs(returnBooks);
     }
 
     public List<Long> getISBNsForPublisher(String publisher, int limit) {
         int cnt = 0;
-        ArrayList<Long> isbns = new ArrayList<Long>();
         // iterate over entire library hashmap
         Iterator<String> iter = library.keySet().iterator();
-        ArrayList<Book> books;
+        Iterator<Book> books;
         Shelf shelf;
+        TreeSet<Book> returnBooks = new TreeSet<Book>(new Shelf.BookSortingComparator());
         while (iter.hasNext() && cnt < limit){
             ArrayList<Shelf> shelfs = library.get(iter.next());
             for (int i = 0; i < shelfs.size() && cnt < limit; i++){
-                books = shelfs.get(i).getBooks();
-                for (int j = 0; j < books.size() && cnt < limit; j++){
-                    if (books.get(j).getPublisher().equals(publisher)){
-                        isbns.add(books.get(j).getIsbn());
+                books = shelfs.get(i).getBooks().iterator();
+                while (books.hasNext() && cnt < limit){
+                    Book book = books.next();
+                    if (book.getPublisher().equals(publisher)){
+                        returnBooks.add(book);
                         cnt++;
                     }
                 }
             }
         }
-        return isbns;
+        return getISBNs(returnBooks);
     }
 
     public List<Long> getISBNsPublishedAfterYear(short publicationYear, int limit) {
         int cnt = 0;
-        ArrayList<Long> isbns = new ArrayList<Long>();
         // iterate over entire library hashmap
         Iterator<String> iter = library.keySet().iterator();
-        ArrayList<Book> books;
+        Iterator<Book> books;
         Shelf shelf;
+        TreeSet<Book> returnBooks = new TreeSet<Book>(new Shelf.BookSortingComparator());
         while (iter.hasNext() && cnt < limit){
             ArrayList<Shelf> shelfs = library.get(iter.next());
             for (int i = 0; i < shelfs.size() && cnt < limit; i++){
-                books = shelfs.get(i).getBooks();
-                for (int j = 0; j < books.size() && cnt < limit; j++){
-                    if (books.get(j).getYear() > publicationYear){
-                        isbns.add(books.get(j).getIsbn());
+                books = shelfs.get(i).getBooks().iterator();
+                while (books.hasNext() && cnt < limit){
+                    Book book = books.next();
+                    if (book.getYear() > publicationYear){
+                        returnBooks.add(book);
                         cnt++;
                     }
                 }
             }
         }
-        return isbns;
+        return getISBNs(returnBooks);
     }
 
     public List<Long> getISBNsWithMinimumPageCount(int minimumPageCount, int limit) {
         int cnt = 0;
-        ArrayList<Long> isbns = new ArrayList<Long>();
         // iterate over entire library hashmap
         Iterator<String> iter = library.keySet().iterator();
-        ArrayList<Book> books;
+        Iterator<Book> books;
         Shelf shelf;
+        TreeSet<Book> returnBooks = new TreeSet<Book>(new Shelf.BookSortingComparator());
         while (iter.hasNext() && cnt < limit){
             ArrayList<Shelf> shelfs = library.get(iter.next());
             for (int i = 0; i < shelfs.size() && cnt < limit; i++){
-                books = shelfs.get(i).getBooks();
-                for (int j = 0; j < books.size() && cnt < limit; j++){
-                    if (books.get(j).getPageCount() >= minimumPageCount){
-                        isbns.add(books.get(j).getIsbn());
+                books = shelfs.get(i).getBooks().iterator();
+                while (books.hasNext() && cnt < limit){
+                    Book book = books.next();
+                    if (book.getPageCount() >= minimumPageCount){
+                        returnBooks.add(book);
                         cnt++;
                     }
                 }
             }
         }
-        return isbns;
+        return getISBNs(returnBooks);
     }
 }

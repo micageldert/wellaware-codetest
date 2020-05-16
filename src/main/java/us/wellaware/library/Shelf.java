@@ -9,7 +9,8 @@ public class Shelf {
     private int shelfNum;
     private String shelfName;
 
-    private ArrayList<Book> books;
+    // tree set ensures that books are always in order within shelf
+    private TreeSet<Book> books;
 
     public Shelf(int maxSize, String genre, int shelfNum){
         this.maxSize = maxSize;
@@ -17,7 +18,7 @@ public class Shelf {
         this.shelfNum = shelfNum;
         this.curSize = 0;
         this.shelfName = genre + " - " + Integer.toString(shelfNum);
-        books = new ArrayList<Book>();
+        books = new TreeSet<Book>(new BookSortingComparator());
     }
 
     public String getGenre(){
@@ -28,8 +29,7 @@ public class Shelf {
         return shelfName;
     }
     
-    public ArrayList<Book> getBooks(){
-        Collections.sort(books, new BookSortingComparator());
+    public TreeSet<Book> getBooks(){
         return books;
     }
 
@@ -45,8 +45,9 @@ public class Shelf {
             return false;
     }
 
-    public void sortBooks(ArrayList<Book> given){
-        Collections.sort(given, new BookSortingComparator());
+    public void setShelfNum(int shelfNum){
+        this.shelfNum = shelfNum;
+        this.shelfName = genre + " - " + Integer.toString(shelfNum);
     }
 
     static class BookSortingComparator implements Comparator<Book> { 
